@@ -1,22 +1,30 @@
 (function(win, d3, $) {  
 
+    var cols = 10;
+
     $.ajax('api/skills').done(function(results) {
 
       data = results;
 
-      console.log('adding i,j');
+      //console.log(data);
 
       data.forEach(function(d, i) {
-        d.i = i % 10;
-        d.j = i / 10 | 0;
+        d.i = i % cols;
+        d.j = i / cols | 0;
+        d.img = new Image();
+        d.img.src = d.image.url;
+        d.img.onload = function() {
+          //console.log(d);
+          drawImage(d);
+        };
       });
 
       Math.seedrandom(+d3.time.hour(new Date()));
       d3.shuffle(data);
 
       var height = 460,
-          imageWidth = 129,
-          imageHeight = 152,
+          imageWidth = 192, //129,
+          imageHeight = 192, //152,
           radius = 75,
           depth = 4,
           currentFocus = [win.innerWidth / 2, height / 2],
@@ -50,8 +58,8 @@
           .selectAll("a");
       var graphic = deep.selectAll("svg,canvas");
 
-      var image = new Image();
-      image.src = "http://d3js.org/ex.jpg";
+      //var image = new Image();
+      //image.src = "http://d3js.org/ex.jpg";
       //image.onload = resized;
 
       d3.select(window)
@@ -59,6 +67,8 @@
         .each(resized);
 
       function drawImage(d) {
+
+        if (!d) return;
 
         context.save();
         context.beginPath();
@@ -71,13 +81,21 @@
           context.lineTo(x, y);
         }
 
-        console.log('drawing image');
+        var sx = 0, //sx = imageWidth * d.i,
+            sy = 0, //sy = imageHeight * d.j,
+            sw = imageWidth,
+            sh = imageHeight,
+            dx = -imageWidth / 2,
+            dy = -imageHeight / 2,
+            dw = sw,
+            dh = sh;
+        console.log('drawing "' + d.name + '" "' + d.image.url 
+          + '" from (' + sx + ',' + sy + ',' + sw + ',' + sh + ')' 
+          + '" at (' + dx + ',' + dy + ',' + dw + ',' + dh + ')');
         context.clip();
-        context.drawImage(image, 
-          imageWidth * d.i, imageHeight * d.j,
-          imageWidth, imageHeight,
-          -imageWidth / 2, -imageHeight / 2,
-          imageWidth, imageHeight);
+        context.drawImage(d.img, 
+          sx, sy, sw, sh,
+          dx, dy, dw, dh);
         context.restore();  
       
       }
@@ -99,12 +117,15 @@
           .attr('width', deepWidth)
           .attr('height', deepHeight);
 
+        var idx;
         centers.forEach(function(center, i) {
           center.j = Math.round(center[1] / (radius * 1.5));
           center.i = Math.round((center[0] - (center.j & 1) * radius * Math.sin(Math.PI / 3)) / (radius * 2 * Math.sin(Math.PI / 3)));
           context.save();
           context.translate(Math.round(center[0]), Math.round(center[1]));
-          drawImage(center.example = data[(center.i % 10) + ((center.j + (center.i / 10 & 1) * 5) % 10) * 10]);
+          idx = (center.i % cols) + ((center.j + (center.i / cols & 1) * 5) % cols) * cols;
+          console.log('idx = ' + idx);
+          drawImage(center.example = data[idx]);
           //stopped here
           context.restore();
         });
@@ -112,45 +133,46 @@
         mesh.attr('d', hexbin.mesh);
 
         anchor = anchor.data(centers, function(d) {
+          if (!d) return '0,0';
           return d.i + ',' + d.j;
         });
 
         anchor.exit().remove();
 
         anchor.enter().append('a')
-          .attr('xref:href', function(d) { return d.example.url; })
-          .attr('xref.title', function(d) { return d.example.name })
+          .attr('xref:href', function(d) { if (!d || !d.example) return ''; return d.example.url; })
+          .attr('xref.title', function(d) { if (!d || !d.example) return ''; return d.example.name })
           .append('path')
           .attr('d', hexbin.hexagon());
 
-        anchor.attr('transform', function(d) { return 'translate (' + d + ')'; });
+        anchor.attr('transform', function(d) { if (!d) return ''; return 'translate (' + d + ')'; });
 
       }
 
-      // function mouseMoved() {
-      //   var m = d3.mouse(this); //[x,y]
-      //   desiredFocus = [
-      //     Math.round((m[0] - win.innerWidth / 2) / depth) * depth + win.innerWidth / 2,
-      //     Math.round((m[1] - height / 2) / depth) * depth + height / 2
-      //   ];
-      //   moved();
-      // }
+      function mouseMoved() {
+        var m = d3.mouse(this); //[x,y]
+        desiredFocus = [
+          Math.round((m[0] - win.innerWidth / 2) / depth) * depth + win.innerWidth / 2,
+          Math.round((m[1] - height / 2) / depth) * depth + height / 2
+        ];
+        moved();
+      }
 
-      // //handle shifting hexbins as user moves mouse
-      // function moved() {
-      //   //what is "idle"?
-      //   //runs repeatedly until it returns true
-      //   if (idle) d3.timer(function() {
-      //     if (idle == Math.abs(desiredFocus[0] - currentFocus[0]) < .5 && Math.abs(desiredFocus[1] - currentFocus[1]) < .5) {
-      //       currentFocus = desiredFocus;
-      //     }
-      //     else {
-      //       currentFocus[0] += (desiredFocus[0] - currentFocus[0]) * .14;
-      //       currentFocus[1] += (desiredFocus[1] - currentFocus[1]) * .14;
-      //     }
-      //     deep.style(transform, 'translate(' + (win.innerWidth / 2 - currentFocus[0]) / depth + 'px,' + (height / 2 - currentFocus[1]) / depth + 'px)');
-      //   });
-      // }
+      //handle shifting hexbins as user moves mouse
+      function moved() {
+        //what is "idle"?
+        //runs repeatedly until it returns true
+        if (idle) d3.timer(function() {
+          if (idle == Math.abs(desiredFocus[0] - currentFocus[0]) < .5 && Math.abs(desiredFocus[1] - currentFocus[1]) < .5) {
+            currentFocus = desiredFocus;
+          }
+          else {
+            currentFocus[0] += (desiredFocus[0] - currentFocus[0]) * .14;
+            currentFocus[1] += (desiredFocus[1] - currentFocus[1]) * .14;
+          }
+          deep.style(transform, 'translate(' + (win.innerWidth / 2 - currentFocus[0]) / depth + 'px,' + (height / 2 - currentFocus[1]) / depth + 'px)');
+        });
+      }
 
     });
 
