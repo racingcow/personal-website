@@ -30,6 +30,14 @@ keystone.init({
 
 });
 
+keystone.set('cloudinary config', {
+	cloud_name: 'racingcow',
+	api_key: '259573439317279',
+	api_secret: 'P1dT896mLOkgMuiXRq8KZCEda3Y'
+});
+
+keystone.set('cloudinary prefix', 'keystone');
+
 // Load your project's Models
 
 keystone.import('models');
@@ -89,7 +97,8 @@ keystone.set('email tests', require('./routes/emails'));
 
 keystone.set('nav', {
 	'enquiries': 'enquiries',
-	'users': 'users'
+	'users': 'users',
+	'skills': 'skills'
 });
 
 // Start Keystone to connect to your database and initialise the web server
