@@ -1,10 +1,19 @@
 (function(win, d3, $) {  
 
-    var cols = 10;
+    var cols = 12; //10;
 
     $.ajax('api/skills').done(function(results) {
 
       data = results;
+
+      var height =  460,
+          imageWidth = 192, //129,
+          imageHeight = 192, //152,
+          radius = 96, //75,
+          depth = 6, //4,
+          currentFocus = [win.innerWidth / 2, height / 2],
+          desiredFocus, 
+          idle = true;
 
       //console.log(data);
 
@@ -22,15 +31,6 @@
       Math.seedrandom(+d3.time.hour(new Date()));
       d3.shuffle(data);
 
-      var height = 460,
-          imageWidth = 192, //129,
-          imageHeight = 192, //152,
-          radius = 75,
-          depth = 4,
-          currentFocus = [win.innerWidth / 2, height / 2],
-          desiredFocus, 
-          idle = true;
-
       var style = document.body.style,
           transform = ("webkitTransform" in style ? "-webkit-"
               : "MozTransform" in style ? "-moz-"
@@ -43,7 +43,6 @@
       if (!("ontouchstart" in document)) {
         d3.select("#examples").on("mousemove", mouseMoved);
       }
-
 
       var deep = d3.select("#examples-deep");
       var canvas = deep.append("canvas")
