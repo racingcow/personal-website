@@ -12,13 +12,13 @@
       skill.img = img;
 
       img.onload = function() {
-        img.onload = img.onerror = img.onabord = null;
+        img.onload = img.onerror = img.onabort = null;
         console.log('finished loading ' + skill.name);
         $dfd.resolve();
       }
 
       img.onerror = img.onabort = function() {
-        img.onload = img.onerror = img.onabord = null;
+        img.onload = img.onerror = img.onabort = null;
         console.log('image errored');
         $dfd.reject();
       }
