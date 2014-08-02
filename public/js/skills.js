@@ -1,10 +1,59 @@
 (function(win, d3, $) {  
 
-    var cols = 12; //10;
+    var cols = 12,
+        imgs = [],
+        skills; //10;
+
+    function loadImage(skill) {
+
+      var $dfd = $.Deferred(),
+          img = new Image();
+
+      skill.img = img;
+
+      img.onload = function() {
+        img.onload = img.onerror = img.onabord = null;
+        console.log('finished loading ' + skill.name);
+        $dfd.resolve();
+      }
+
+      img.onerror = img.onabort = function() {
+        img.onload = img.onerror = img.onabord = null;
+        console.log('image errored');
+        $dfd.reject();
+      }
+
+      skill.img.src = skill.image.url;
+
+      return $dfd.promise();
+    }
+
+    function loadImages() {
+
+      var $dfd = $.Deferred(),
+          funcs = [];
+
+      for (var i = 0; i < skills.length; i++) {
+        funcs.push(loadImage(skills[i]));
+      }
+
+      console.log(funcs);
+
+      $.when.apply($, funcs)
+        .done(function() {
+          console.log('images loaded...');
+          return $dfd.resolve();
+        })
+        .fail($dfd.reject);
+
+      return $dfd.promise();
+    }
 
     $.ajax('api/skills').done(function(results) {
 
-      data = results;
+      skills = results;
+
+      //console.log(skills);
 
       var height =  460,
           imageWidth = 192, //129,
@@ -15,21 +64,13 @@
           desiredFocus, 
           idle = true;
 
-      //console.log(data);
-
-      data.forEach(function(d, i) {
+      skills.forEach(function(d, i) {
         d.i = i % cols;
         d.j = i / cols | 0;
-        d.img = new Image();
-        d.img.src = d.image.url;
-        d.img.onload = function() {
-          //console.log(d);
-          drawImage(d);
-        };
       });
 
       Math.seedrandom(+d3.time.hour(new Date()));
-      d3.shuffle(data);
+      d3.shuffle(skills);
 
       var style = document.body.style,
           transform = ("webkitTransform" in style ? "-webkit-"
@@ -57,15 +98,17 @@
           .selectAll("a");
       var graphic = deep.selectAll("svg,canvas");
 
-      //var image = new Image();
-      //image.src = "http://d3js.org/ex.jpg";
-      //image.onload = resized;
+      $.when(loadImages())
+        .done(function() {
+          //console.log(skills);
+          resized();
+          d3.select(window)
+            .on("resize", resized)
+            .each(resized);
+        })
+        .fail(function() { console.log('loadImages failed!') });
 
-      d3.select(window)
-        .on("resize", resized)
-        .each(resized);
-
-      function drawImage(d) {
+      function drawImage(d) { 
 
         if (!d) return;
 
@@ -100,6 +143,8 @@
       }
 
       function resized() {
+
+        console.log('resized!');
         
         var deepWidth = win.innerWidth * (depth - 1) / depth,
             deepHeight = height * (depth + 1) / depth,
@@ -108,7 +153,6 @@
                         .centers(); //[{i:c,j:r}, ...]
 
         desiredFocus = [win.innerWidth / 2, height / 2]; //center
-        //moved(); //stopped here
 
         graphic
           .style('left', Math.round((win.innerWidth - deepWidth) / 2) + 'px')
@@ -124,8 +168,7 @@
           context.translate(Math.round(center[0]), Math.round(center[1]));
           idx = (center.i % cols) + ((center.j + (center.i / cols & 1) * 5) % cols) * cols;
           console.log('idx = ' + idx);
-          drawImage(center.example = data[idx]);
-          //stopped here
+          drawImage(center.example = skills[idx]);
           context.restore();
         });
 
